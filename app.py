@@ -4,20 +4,23 @@ from flask import Flask, request
 from dotenv import load_dotenv
 import threading
 
-# Import our own modules
+# Load environment variables from .env file FIRST
+load_dotenv() 
+
+# Import our own modules AFTER loading variables
 from bot_logic import process_command
-from services import send_whatsapp_message
+from services import send_whatsapp_message, configure_services
 from scheduler import run_scheduler
 
-# Load environment variables from .env file
-load_dotenv()
+# Configure services with the loaded keys
+configure_services()
 
 app = Flask(__name__)
 
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
     """Verifies the webhook subscription with Meta."""
-    verify_token = "vcuyvxushakh009!" # Your secret token
+    verify_token = "your-secret-verify-token" # Your secret token
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
