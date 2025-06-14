@@ -21,7 +21,7 @@ app = Flask(__name__)
 def verify_webhook():
     """Verifies the webhook subscription with Meta."""
     print("Webhook verification attempt received.") # Diagnostic print
-    verify_token = "happy" # Your secret token, now lowercase
+    verify_token = "cecue009!" # Your secret token, now lowercase
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
