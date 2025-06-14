@@ -12,11 +12,10 @@ def configure_services():
     gemini_api_key = os.getenv('GEMINI_API_KEY')
     
     if not WHATSAPP_TOKEN or not gemini_api_key:
-        print("ERROR: API keys not found. Please set WHATSAPP_TOKEN and GEMINI_API_KEY environment variables.")
+        print("ERROR: API keys not found.")
     else:
         genai.configure(api_key=gemini_api_key)
         print("Services configured successfully.")
-
 
 def send_whatsapp_message(to_number, phone_number_id, text):
     """Sends a message to a user via the WhatsApp Cloud API."""
@@ -25,11 +24,9 @@ def send_whatsapp_message(to_number, phone_number_id, text):
         return
 
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    data = {"messaging_product": "whatsapp", "to": to_number, "text": {"body": text}}
+    headers = { "Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json" }
+    data = { "messaging_product": "whatsapp", "to": to_number, "text": {"body": text} }
+    
     try:
         response = requests.post(url, json=data, headers=headers)
         response.raise_for_status()
@@ -37,38 +34,37 @@ def send_whatsapp_message(to_number, phone_number_id, text):
     except requests.exceptions.RequestException as e:
         print(f"Error sending message: {e}")
 
-
 def get_summary_and_actions_with_gemini(conversation_history):
     """
-    Uses Gemini to analyze a conversation, summarize it, 
-    and extract action items.
+    Uses Gemini's JSON mode to analyze a conversation and extract a summary
+    and action items in a structured format.
     """
     if not conversation_history:
-        return "No conversation history to analyze."
+        return "{}"
 
-    # Format the conversation for the AI
     formatted_conversation = "\n".join(conversation_history)
+    
+    # New prompt designed for structured JSON output
+    prompt = f"""
+    Analyze the following WhatsApp conversation. Your user is Yonatan.
+    Provide your response as a valid JSON object with two keys:
+    1. "summary": A brief, one-sentence summary of the conversation's main topic.
+    2. "action_items": A list of strings, where each string is a specific task or action item for Yonatan.
+    If there are no action items, the list should be empty.
 
+    Conversation:
+    ---
+    {formatted_conversation}
+    ---
+    """
+    
     try:
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # Configure the model to return JSON
+        generation_config = genai.types.GenerationConfig(response_mime_type="application/json")
         
-        # This is a more advanced prompt for the AI
-        prompt = f"""
-        You are a personal assistant. Your user, Yonatan, is busy and needs you to analyze the following WhatsApp conversation.
-        Please perform two tasks:
-        1. Provide a brief, one-sentence summary of the main topic of the conversation.
-        2. Identify and list any action items or tasks that were assigned to Yonatan, or that Yonatan needs to do. Look for mentions of his name or phrases like "you need to," "can you," etc. If there are no action items for him, state "No action items for Yonatan."
-
-        Here is the conversation:
-        ---
-        {formatted_conversation}
-        ---
-
-        Analysis:
-        """
-        
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, generation_config=generation_config)
         return response.text
     except Exception as e:
         print(f"Gemini API Error: {e}")
-        return "מצטער, הייתה בעיה בניתוח השיחה באמצעות Gemini."
+        return '{ "summary": "Error analyzing conversation.", "action_items": [] }'
