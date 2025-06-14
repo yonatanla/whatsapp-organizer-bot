@@ -21,16 +21,17 @@ app = Flask(__name__)
 def verify_webhook():
     """Verifies the webhook subscription with Meta."""
     print("Webhook verification attempt received.") # Diagnostic print
-    verify_token = "HAPPY" # Your secret token
+    verify_token = "happy" # Your secret token, now lowercase
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    if mode and token and mode == "subscribe" and token == verify_token:
+    # We now compare both tokens in lowercase to avoid case-sensitivity issues
+    if mode and token and mode == "subscribe" and token.lower() == verify_token:
         print("WEBHOOK_VERIFIED")
         return challenge, 200
     else:
-        print("Verification failed: Token mismatch or missing parameters.")
+        print(f"Verification failed: Received token '{token}' did not match expected token '{verify_token}'.")
         return "Verification token mismatch", 403
 
 @app.route('/webhook', methods=['POST'])
