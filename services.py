@@ -44,7 +44,6 @@ def get_summary_and_actions_with_gemini(conversation_history):
 
     formatted_conversation = "\n".join(conversation_history)
     
-    # New prompt designed for structured JSON output
     prompt = f"""
     Analyze the following WhatsApp conversation. Your user is Yonatan.
     Provide your response as a valid JSON object with two keys:
@@ -60,11 +59,33 @@ def get_summary_and_actions_with_gemini(conversation_history):
     
     try:
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        # Configure the model to return JSON
         generation_config = genai.types.GenerationConfig(response_mime_type="application/json")
-        
         response = model.generate_content(prompt, generation_config=generation_config)
         return response.text
     except Exception as e:
         print(f"Gemini API Error: {e}")
         return '{ "summary": "Error analyzing conversation.", "action_items": [] }'
+
+def analyze_for_task(message):
+    """
+    NEW: Uses Gemini to determine if a single message contains a task.
+    """
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    generation_config = genai.types.GenerationConfig(response_mime_type="application/json")
+    
+    prompt = f"""
+    Analyze the following message. Your user's name is Yonatan.
+    Determine if the message contains an explicit or implicit task, to-do item, or reminder for Yonatan.
+    Respond with a JSON object with two keys:
+    1. "is_task": boolean (true if it is a task, false otherwise).
+    2. "task_description": a string containing the clear, concise task description if is_task is true, otherwise an empty string. Reword the task as a simple command, for example, "Call the accountant tomorrow morning."
+
+    Message: "{message}"
+    """
+    
+    try:
+        response = model.generate_content(prompt, generation_config=generation_config)
+        return response.text
+    except Exception as e:
+        print(f"Gemini Task Analysis Error: {e}")
+        return '{ "is_task": false, "task_description": "" }'
