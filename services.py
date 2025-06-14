@@ -13,7 +13,6 @@ def configure_services():
     
     if not WHATSAPP_TOKEN or not gemini_api_key:
         print("ERROR: API keys not found. Please set WHATSAPP_TOKEN and GEMINI_API_KEY environment variables.")
-        # In a real app, you might want to raise an exception here
     else:
         genai.configure(api_key=gemini_api_key)
         print("Services configured successfully.")
@@ -39,21 +38,37 @@ def send_whatsapp_message(to_number, phone_number_id, text):
         print(f"Error sending message: {e}")
 
 
-def summarize_with_gemini(text_to_summarize):
-    """Generates a summary using the Gemini API."""
+def get_summary_and_actions_with_gemini(conversation_history):
+    """
+    Uses Gemini to analyze a conversation, summarize it, 
+    and extract action items.
+    """
+    if not conversation_history:
+        return "No conversation history to analyze."
+
+    # Format the conversation for the AI
+    formatted_conversation = "\n".join(conversation_history)
+
     try:
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        
+        # This is a more advanced prompt for the AI
         prompt = f"""
-        Please summarize the following list of tasks in Hebrew.
-        Provide a short, easy-to-read summary that captures the main activities for the day.
+        You are a personal assistant. Your user, Yonatan, is busy and needs you to analyze the following WhatsApp conversation.
+        Please perform two tasks:
+        1. Provide a brief, one-sentence summary of the main topic of the conversation.
+        2. Identify and list any action items or tasks that were assigned to Yonatan, or that Yonatan needs to do. Look for mentions of his name or phrases like "you need to," "can you," etc. If there are no action items for him, state "No action items for Yonatan."
 
-        Task list:
-        {text_to_summarize}
+        Here is the conversation:
+        ---
+        {formatted_conversation}
+        ---
 
-        Summary:
+        Analysis:
         """
+        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         print(f"Gemini API Error: {e}")
-        return "מצטער, הייתה בעיה ביצירת הסיכום באמצעות Gemini."
+        return "מצטער, הייתה בעיה בניתוח השיחה באמצעות Gemini."

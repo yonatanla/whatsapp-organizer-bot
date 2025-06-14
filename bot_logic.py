@@ -1,41 +1,40 @@
 # bot_logic.py
-from services import summarize_with_gemini  # Import the Gemini function
+from services import get_summary_and_actions_with_gemini
+from collections import deque
 
-# We will store tasks in memory here.
-# For a real app, this should be a database.
-tasks = []
+# We will now store the last 20 messages of the conversation.
+# `deque` is a special list that automatically removes old items.
+conversation_history = deque(maxlen=20)
 
-def process_command(command):
-    """Processes the user's command and returns a reply."""
-    cmd_lower = command.lower()
+def process_command(message_text):
+    """
+    Processes user commands and conversation text.
+    Now, it only responds to specific commands.
+    """
+    # Always add the latest message to our history
+    conversation_history.append(message_text)
+    
+    # Make the command check case-insensitive
+    cmd_lower = message_text.lower()
 
-    if cmd_lower.startswith("הוסף משימה ") or cmd_lower.startswith("add task "):
-        task_description = command.split(" ", 2)[2]
-        tasks.append(task_description)
-        return f"✅ משימה נוספה: '{task_description}'"
+    # --- Command Handling ---
 
-    elif cmd_lower == "רשימת משימות" or cmd_lower == "list tasks":
-        if not tasks:
-            return "אין לך משימות! 🎉"
-        task_list = "\n".join(f"- {task}" for task in tasks)
-        return f"📝 *המשימות שלך:*\n{task_list}"
+    if cmd_lower == "/summary":
+        # When this command is received, analyze the stored history
+        print(f"Analyzing history: {list(conversation_history)}")
+        analysis = get_summary_and_actions_with_gemini(list(conversation_history))
+        # Clear the history after summarizing so we start fresh
+        conversation_history.clear()
+        return f"🤖 *ניתוח שיחה:*\n{analysis}"
 
-    elif cmd_lower == "סכם יום" or cmd_lower == "summarize day":
-        if not tasks:
-            return "אין משימות לסכם."
-        tasks_as_string = "\n".join(tasks)
-        summary = summarize_with_gemini(tasks_as_string) # Call the imported function
-        return f"🤖 *סיכום יומי (באדיבות Gemini):*\n{summary}"
-
-    elif cmd_lower == "עזרה" or cmd_lower == "help":
+    elif cmd_lower == "/help":
         return (
-            "שלום! אני בוט הארגון האישי שלך. הנה הפקודות:\n\n"
-            "*`הוסף משימה [תיאור]`* - מוסיף משימה חדשה.\n"
-            "*`רשימת משימות`* - מציג את כל המשימות.\n"
-            "*`סכם יום`* - יוצר סיכום של כל המשימות."
+            "שלום! אני בוט העוזר האישי שלך.\n\n"
+            "כדי שאנתח את השיחה שלנו, פשוט שוחח איתי כרגיל.\n"
+            "בכל עת, כתוב `/summary` ואני אסכם את 20 ההודעות האחרונות ואוציא עבורך משימות."
         )
 
-    else:
-        # If the command isn't recognized, we don't reply.
-        # This prevents the bot from saying "I don't understand" to every message in a group chat.
-        return None
+    # By default, the bot will no longer reply to every single message.
+    # It will only reply to the specific commands above.
+    return None
+
