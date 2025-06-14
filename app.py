@@ -20,6 +20,7 @@ app = Flask(__name__)
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
     """Verifies the webhook subscription with Meta."""
+    print("Webhook verification attempt received.") # Diagnostic print
     verify_token = "HAPPY" # Your secret token
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
@@ -29,6 +30,7 @@ def verify_webhook():
         print("WEBHOOK_VERIFIED")
         return challenge, 200
     else:
+        print("Verification failed: Token mismatch or missing parameters.")
         return "Verification token mismatch", 403
 
 @app.route('/webhook', methods=['POST'])
